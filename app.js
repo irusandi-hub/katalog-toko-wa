@@ -88,7 +88,12 @@
     s += '<g transform="rotate(' + (sudut ? (sudut % 2 ? -8 : 6) : 0) + ' 140 150)">' + bentuk + '</g>';
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280">' + s + '</svg>');
   }
-  function srcGambar(g, i) { return typeof g === 'string' ? g : ilustrasi(g, i || 0); }
+  function srcGambar(g, i) {
+    var src = typeof g === 'string' ? g.trim() : ilustrasi(g, i || 0);
+    // CSV Google Sheet adalah input eksternal: cegah skema javascript dan injeksi atribut HTML.
+    if (typeof g === 'string' && !/^(https?:\/\/|\/(?!\/)|\.\.?\/|[a-z0-9_-][^:]*)/i.test(src)) return '';
+    return esc(src);
+  }
 
   var API = { rupiah: rupiah, hargaVarian: hargaVarian, hitungTotal: hitungTotal, buatPesan: buatPesan, linkWA: linkWA, parseCSV: parseCSV, produkDariCSV: produkDariCSV, ilustrasi: ilustrasi };
   if (typeof module !== 'undefined' && module.exports) { module.exports = API; return; }
