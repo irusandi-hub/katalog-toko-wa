@@ -169,11 +169,19 @@
   // ---------- keranjang ----------
   function labelPilihan(pil) { return Object.keys(pil || {}).map(function (k) { return pil[k]; }).join(', '); }
   function tambah(p, pilihan, qty) {
+    var stok = Number(p.stok), jumlahTambah = Math.max(1, Math.floor(Number(qty) || 1));
     var kunci = p.id + '|' + JSON.stringify(pilihan);
     var ada = keranjang.find(function (i) { return i.kunci === kunci; });
-    if (ada) ada.qty += qty;
-    else keranjang.push({ kunci: kunci, id: p.id, nama: p.nama, label: labelPilihan(pilihan), harga: hargaVarian(p, pilihan), qty: qty, gIdx: 0 });
-    simpan(); toast(p.nama + ' masuk keranjang');
+    var jumlahAda = ada ? Number(ada.qty) || 0 : 0;
+    if (Number.isFinite(stok) && stok <= 0) return toast('Stok ' + p.nama + ' sedang habis');
+    if (Number.isFinite(stok) && stok > 0 && jumlahAda + jumlahTambah > stok) {
+      jumlahTambah = stok - jumlahAda;
+      if (jumlahTambah <= 0) return toast('Stok ' + p.nama + ' sudah mencapai batas');
+      toast('Jumlah disesuaikan dengan stok tersedia');
+    } else toast(p.nama + ' masuk keranjang');
+    if (ada) ada.qty = jumlahAda + jumlahTambah;
+    else keranjang.push({ kunci: kunci, id: p.id, nama: p.nama, label: labelPilihan(pilihan), harga: hargaVarian(p, pilihan), qty: jumlahTambah, gIdx: 0 });
+    simpan();
     var h = $('#hitungKeranjang'); h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop');
   }
   function simpan() { simpanan.set('katalog-keranjang', keranjang); renderKeranjang(); }
@@ -230,7 +238,11 @@
   $('#laciIsi').onclick = function (e) {
     var b = e.target.closest('button'); if (!b) return;
     if (b.dataset.hapus) keranjang.splice(+b.dataset.hapus, 1);
-    else if (b.dataset.k) { var i = keranjang[+b.dataset.k]; i.qty += +b.dataset.d; if (i.qty < 1) keranjang.splice(+b.dataset.k, 1); }
+    else if (b.dataset.k) {
+      var i = keranjang[+b.dataset.k], delta = +b.dataset.d, p = cari(i.id);
+      if (delta > 0 && p && Number.isFinite(Number(p.stok)) && Number(p.stok) > 0 && i.qty >= Number(p.stok)) toast('Jumlah sudah mencapai stok tersedia');
+      else { i.qty += delta; if (i.qty < 1) keranjang.splice(+b.dataset.k, 1); }
+    }
     simpan();
   };
   $('#pilihKota').onchange = renderKeranjang;
